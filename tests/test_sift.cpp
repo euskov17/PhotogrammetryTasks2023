@@ -27,6 +27,7 @@
 
 // функция рисует кружки случайного цвета вокруг точек, но если для точки не нашлось сопоставления - кружок будет толстый и ярко красный
 void drawKeyPoints(cv::Mat &img, const std::vector<cv::KeyPoint> &kps, const std::vector<unsigned char> &is_not_matched) {
+
     cv::RNG r(124124);
     for (size_t i = 0; i < kps.size(); ++i) {
         int thickness = 1;

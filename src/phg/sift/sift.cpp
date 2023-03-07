@@ -35,6 +35,7 @@
 #define DESCRIPTOR_SAMPLE_WINDOW_R 1.0 // минимальный радиус окна в рамках которого строится гистограмма из 8 корзин-направлений (т.е. для каждого из 16 элементов дескриптора), R=1 => 1x1 окно
 
 
+
 void phg::SIFT::detectAndCompute(const cv::Mat &originalImg, std::vector<cv::KeyPoint> &kps, cv::Mat &desc) {
     if (DEBUG_ENABLE) cv::imwrite(DEBUG_PATH + "00_input.png", originalImg);
 
