@@ -290,10 +290,10 @@ double calcMagnitude(const cv::Mat &img, size_t x, size_t y){
   return pow(img.at<float>(x + 1, y) - img.at<float>(x - 1, y), 2) + pow(img.at<float>(x, y + 1) - img.at<float>(x, y - 1), 2);
 }
 
-double calcOrientation(const cv::Mat &img, size_t x, size_t y, float angle=0.0){
+double calcOrientation(const cv::Mat &img, size_t x, size_t y){
   double orientation = atan2((img.at<float>(x, y + 1) - img.at<float>(x, y - 1)), (img.at<float>(x + 1, y) - img.at<float>(x - 1, y)));
   orientation = orientation * 180.0 / M_PI;
-  orientation = (orientation + 90.0 - angle);
+  orientation = orientation + 90.0;
   while (orientation <  0.0)   orientation += 360.0;
   while (orientation >= 360.0) orientation -= 360.0;
   return orientation;
@@ -360,7 +360,9 @@ bool phg::SIFT::buildDescriptor(const cv::Mat &img, float px, float py, double d
                 return false;
 
               double magnitude = calcMagnitude(img, x, y);
-              double orientation = calcOrientation(img, x, y, angle);
+              double orientation = calcOrientation(img, x, y);
+
+              // orientation -= angle;
 
               // TODOза счет чего этот вклад будет сравниваться с этим же вкладом даже если эта картинка будет повернута? что нужно сделать с ориентацией каждого градиента из окрестности этой ключевой точки?
               rassert(orientation >= 0.0 && orientation < 360.0, 3515215125412);
