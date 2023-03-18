@@ -1,8 +1,3 @@
-Skip to content
-Search or jump to…
-Pull requests
-Issues
-Codespaces
 #include "sift.h"
 
 #include <opencv2/highgui.hpp>
