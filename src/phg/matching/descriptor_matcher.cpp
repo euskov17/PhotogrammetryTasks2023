@@ -7,11 +7,11 @@ void phg::DescriptorMatcher::filterMatchesRatioTest(const std::vector<std::vecto
                                                     std::vector<cv::DMatch> &filtered_matches)
 {
     filtered_matches.clear();
-    for (size_t i = 0; i < matches.size(); i++) {
-      if (matches[i].size() < 1 ||
-          matches[i][0].distance / matches[i][1].distance < 0.6) {
-        filtered_matches.push_back(matches[i][0]);
-      }
+
+    for (int i = 0; i < (int)matches.size(); ++i) {
+        if (matches[i].size() < 1 || matches[i][0].distance / matches[i][1].distance < 0.6) {
+            filtered_matches.push_back(matches[i][0]);
+        }
     }
 
 }
@@ -79,23 +79,23 @@ void phg::DescriptorMatcher::filterMatchesClusters(const std::vector<cv::DMatch>
 //    метч остается, если левое и правое множества первых total_neighbors соседей в радиусах поиска(radius2_query, radius2_train)
     //    имеют как минимум consistent_matches общих элементов
     // TODO заполнить filtered_matches
-    for (int i = 0; i < n_matches; i++){
-        std:: vector<int> close_neighbours;
-
+    for (int i = 0; i < n_matches; i++)
+    {
+        std::set<int> close_neighbours;
         for (int j = 0; j < total_neighbours; j++)
-            if (distances2_query.at<float>(i,j) <= radius2_query)
-              close_neighbours.push_back(indices_query.at<int>(i,j));
-
-        int good_matches_cnt = 0;
-
+        {
+            if (distances2_query.at<float>(i, j) <= radius2_query)
+                close_neighbours.insert(indices_query.at<int>(i, j));
+        }
+        int good_cnt = 0;
         for (int j = 0; j < total_neighbours; j++)
-            if (distances2_train.at<float>(i, j) <= radius2_train){
-              int idx = indices_query.at<int>(i,j);
-              for (size_t k = 0; k < close_neighbours.size(); k++)
-                if (close_neighbours[k] == idx)
-                  good_matches_cnt++;
+        {
+            if (distances2_train.at<float>(i, j) <= radius2_train)
+            {
+                if (close_neighbours.find(indices_train.at<int>(i, j)) != close_neighbours.end()) ++good_cnt;
             }
-        if (good_matches_cnt >= consistent_matches)
+        }
+        if (good_cnt >= consistent_matches)
             filtered_matches.push_back(matches[i]);
     }
 }
