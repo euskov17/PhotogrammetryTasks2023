@@ -41,8 +41,10 @@ void phg::randomSample(std::vector<int> &dst, int max_id, int sample_size, uint6
 
 bool phg::epipolarTest(const cv::Vec2d &pt0, const cv::Vec2d &pt1, const cv::Matx33d &F, double t)
 {
-    cv::Vec3d l1 = F * cv::Vec3d(pt0[0], pt0[1], 1.0);
-    double s1 = l1[0] * l1[0] + l1[1] * l1[1];
-    double d1 = l1[0] * pt1[0] + l1[1] * pt1[1] + l1[2];
-    return d1*d1 < t*t * s1;
+    cv::Vec3d l = F * cv::Vec3d(pt0[0], pt0[1], 1);
+    
+    double l_len = sqrt(std::pow(l[0], 2) + std::pow(l[1], 2));
+    double lenght = abs(pt1[0] * l[0] + pt1[1] * l[1] + l[2]);
+    double length_norm = lenght / l_len;
+    return length_norm < t;
 }

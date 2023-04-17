@@ -17,20 +17,14 @@ namespace {
         copy(Ecv, E);
 
         Eigen::JacobiSVD<Eigen::MatrixXd> svd(E, Eigen::ComputeFullU | Eigen::ComputeFullV);
+        // throw std::runtime_error("not implemented yet");
 
-        Eigen::MatrixXd U = svd.matrixU();
-        Eigen::VectorXd s = svd.singularValues();
-        Eigen::MatrixXd V = svd.matrixV();
+        Eigen::MatrixXd s = Eigen::MatrixXd::Zero(3,3);
 
-        Eigen::MatrixXd S = Eigen::MatrixXd(3, 3);
-        S.setZero();
+        s(0, 0) = svd.singularValues()[0];
+        s(1, 1) = s(0, 0);
 
-        S(0, 0) = 1.0;
-        S(1, 1) = 1.0;
-        S(2, 2) = 0.0;
-
-        E = U * S * V.transpose();
-
+        E = svd.matrixU() * s * svd.matrixV().transpose();
         copy(E, Ecv);
     }
 
@@ -38,13 +32,13 @@ namespace {
 
 cv::Matx33d phg::fmatrix2ematrix(const cv::Matx33d &F, const phg::Calibration &calib0, const phg::Calibration &calib1)
 {
-    // TODO check that correct conversion (transpose ok)
+    // throw std::runtime_error("not implemented yet");
 
-    // TODO add separate test for fmatrix (check 1) reprojection errors 2) f matrix singular value property)
-    // TODO add separate test for ematrix (check 1) reprojection errors of normalized coordinates 2) e matrix singular value property)
-    // TODO add separate test for ematrix decomposition: 1) check angle between cameras 2) check translation direction between cameras
+    cv::Matx33d K0 = calib0.K();
+    cv::Matx33d K1 = calib1.K();
 
-    matrix3d E = calib1.K().t() * F * calib0.K();
+
+    cv::Matx33d E = K1.t() * F * K0;
 
     ensureSpectralProperty(E);
 
@@ -76,18 +70,25 @@ namespace {
 
     double getDepth(const vector2d &m0, const vector2d &m1, const phg::Calibration &calib0, const phg::Calibration &calib1, const matrix34d &P0, const matrix34d &P1)
     {
-        vector3d p0 = calib0.unproject(m0);
-        vector3d p1 = calib1.unproject(m1);
+       // throw std::runtime_error("not implemented yet");
+       // скомпенсировать калибровки камер
 
-        vector3d ps[2] = {p0, p1};
-        matrix34d Ps[2] = {P0, P1};
+       vector3d p0 = calib0.unproject(m0);
+       vector3d p1 = calib1.unproject(m1);       
 
-        vector4d X = phg::triangulatePoint(Ps, ps, 2);
-        if (X[3] != 0) {
-            X /= X[3];
-        }
+       vector3d ps[2] = {p0, p1};
+       matrix34d Ps[2] = {P0, P1};
 
-        return p0.dot(P0 * X) > 0 && p1.dot(P1 * X) > 0;
+       vector4d X = phg::triangulatePoint(Ps, ps, 2);
+       if (X[3] != 0) {
+           X /= X[3];
+       }
+
+       // точка должна иметь положительную глубину для обеих камер
+       bool depth0Positive = calib0.project(P0 * X)[2] > 0;
+       bool depth1Positive = calib0.project(P1 * X)[2] > 0;
+
+       return depth0Positive && depth1Positive;
     }
 }
 
@@ -100,99 +101,85 @@ namespace {
 // первичное разложение существенной матрицы (а из него, взаимное расположение камер) для последующего уточнения методом нелинейной оптимизации
 void phg::decomposeEMatrix(cv::Matx34d &P0, cv::Matx34d &P1, const cv::Matx33d &Ecv, const std::vector<cv::Vec2d> &m0, const std::vector<cv::Vec2d> &m1, const Calibration &calib0, const Calibration &calib1, bool verbose)
 {
-    if (m0.size() != m1.size()) {
-        throw std::runtime_error("decomposeEMatrix : m0.size() != m1.size()");
-    }
+    // throw std::runtime_error("not implemented yet");
+   if (m0.size() != m1.size()) {
+       throw std::runtime_error("decomposeEMatrix : m0.size() != m1.size()");
+   }
 
-    using mat = Eigen::MatrixXd;
-    using vec = Eigen::VectorXd;
-    
-    mat E;
-    copy(Ecv, E);
+   using mat = Eigen::MatrixXd;
+   using vec = Eigen::VectorXd;
 
-    // (см. Hartley & Zisserman p.258)
+   mat E;
+   copy(Ecv, E);
 
-    Eigen::JacobiSVD<mat> svd(E, Eigen::ComputeFullU | Eigen::ComputeFullV);
+   // (см. Hartley & Zisserman p.258)
 
-    mat U = svd.matrixU();
-    vec s = svd.singularValues();
-    mat V = svd.matrixV();
+   Eigen::JacobiSVD<mat> svd(E, Eigen::ComputeFullU | Eigen::ComputeFullV);
 
-    // U, V must be rotation matrices, not just orthogonal
-    if (U.determinant() < 0) U = -U;
-    if (V.determinant() < 0) V = -V;
+   mat U = svd.matrixU();
+   vec s = svd.singularValues();
+   mat V = svd.matrixV();
 
-    if (verbose) {
-        std::cout << "U:\n" << U << std::endl;
-        std::cout << "s:\n" << s << std::endl;
-        std::cout << "V:\n" << V << std::endl;
-    }
+   mat W = mat::Zero(3,3);
+   W(2, 2) = 1;
+   W(1, 0) = 1;
+   W(0, 1) = -1;
 
-    mat W(3, 3);
-    W << 0, -1, 0, 1, 0, 0, 0, 0, 1;
+   // U, V must be rotation matrices, not just orthogonal
+   if (U.determinant() < 0) U = -U;
+   if (V.determinant() < 0) V = -V;
 
-    mat Z(3, 3);
-    Z << 0, 1, 0, -1, 0, 0, 0, 0, 0;
+   std::cout << "U:\n" << U << std::endl;
+   std::cout << "s:\n" << s << std::endl;
+   std::cout << "V:\n" << V << std::endl;
 
-    if (verbose) {
-        std::cout << "W:\n" << W << std::endl;
-        std::cout << "Z:\n" << Z << std::endl;
-    }
 
-    mat R0 = U * W * V.transpose();
-    mat R1 = U * W.transpose() * V.transpose();
+   mat R0 = U * W * V.transpose();
+   mat R1 = U * W.transpose() * V.transpose();
 
-    if (verbose) {
-        std::cout << "R0:\n" << R0 << std::endl;
-        std::cout << "R1:\n" << R1 << std::endl;
-    }
+   std::cout << "R0:\n" << R0 << std::endl;
+   std::cout << "R1:\n" << R1 << std::endl;
 
-    vec t0 = U.col(2);
-    vec t1 = -t0;
+   vec t0 = U.col(2);
+   vec t1 = -U.col(2);
 
-    if (verbose) {
-        std::cout << "t0:\n" << t0 << std::endl;
-    }
+   std::cout << "t0:\n" << t0 << std::endl;
 
-    P0 = matrix34d::eye();
+   P0 = matrix34d::eye();
 
-    // 4 possible solutions
-    matrix34d P10 = composeP(R0, t0);
-    matrix34d P11 = composeP(R0, t1);
-    matrix34d P12 = composeP(R1, t0);
-    matrix34d P13 = composeP(R1, t1);
-    matrix34d P1s[4] = {P10, P11, P12, P13};
+   // 4 possible solutions
+   matrix34d P10 = composeP(R0, t0);
+   matrix34d P11 = composeP(R0, t1);
+   matrix34d P12 = composeP(R1, t0);
+   matrix34d P13 = composeP(R1, t1);
+   matrix34d P1s[4] = {P10, P11, P12, P13};
 
-    // need to select best of 4 solutions: 3d points should be in front of cameras (positive depths)
-    int best_count = 0;
-    int best_idx = -1;
-    for (int i = 0; i < 4; ++i) {
-        int count = 0;
-        for (int j = 0; j < (int) m0.size(); ++j) {
-            if (getDepth(m0[j], m1[j], calib0, calib1, P0, P1s[i]) > 0) {
-                ++count;
-            }
-        }
-        if (verbose) {
-            std::cout << "decomposeEMatrix: count: " << count << std::endl;
-        }
-        if (count > best_count) {
-            best_count = count;
-            best_idx = i;
-        }
-    }
+   // need to select best of 4 solutions: 3d points should be in front of cameras (positive depths)
+   int best_count = 0;
+   int best_idx = -1;
+   for (int i = 0; i < 4; ++i) {
+       int count = 0;
+       for (int j = 0; j < (int) m0.size(); ++j) {
+           if (depthTest(m0[j], m1[j], calib0, calib1, P0, P1s[i])) {
+               ++count;
+           }
+       }
+       std::cout << "decomposeEMatrix: count: " << count << std::endl;
+       if (count > best_count) {
+           best_count = count;
+           best_idx = i;
+       }
+   }
 
-    if (best_count == 0) {
-        throw std::runtime_error("decomposeEMatrix : can't decompose ematrix");
-    }
+   if (best_count == 0) {
+       throw std::runtime_error("decomposeEMatrix : can't decompose ematrix");
+   }
 
-    P1 = P1s[best_idx];
+   P1 = P1s[best_idx];
 
-    if (verbose) {
-        std::cout << "best idx: " << best_idx << std::endl;
-        std::cout << "P0: \n" << P0 << std::endl;
-        std::cout << "P1: \n" << P1 << std::endl;
-    }
+   std::cout << "best idx: " << best_idx << std::endl;
+   std::cout << "P0: \n" << P0 << std::endl;
+   std::cout << "P1: \n" << P1 << std::endl;
 }
 
 void phg::decomposeUndistortedPMatrix(cv::Matx33d &R, cv::Vec3d &O, const cv::Matx34d &P)
@@ -205,7 +192,7 @@ void phg::decomposeUndistortedPMatrix(cv::Matx33d &R, cv::Vec3d &O, const cv::Ma
     O(2) = O_mat(2);
 
     if (cv::determinant(R) < 0) {
-        R *= -1;   
+        R *= -1;
     }
 }
 
