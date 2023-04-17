@@ -160,7 +160,7 @@ void phg::decomposeEMatrix(cv::Matx34d &P0, cv::Matx34d &P1, const cv::Matx33d &
    for (int i = 0; i < 4; ++i) {
        int count = 0;
        for (int j = 0; j < (int) m0.size(); ++j) {
-           if (depthTest(m0[j], m1[j], calib0, calib1, P0, P1s[i])) {
+           if (getDepth(m0[j], m1[j], calib0, calib1, P0, P1s[i]) > 0) {
                ++count;
            }
        }

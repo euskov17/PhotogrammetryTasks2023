@@ -115,7 +115,7 @@ namespace {
     }
 
 
-    cv::Matx34d estimateCameraMatrixRANSAC(const phg::Calibration &calib, const std::vector<cv::Vec3d> &X, const std::vector<cv::Vec2d> &x, bool verbose)
+    cv::Matx34d estimateCameraMatrixRANSAC(const phg::Calibration &calib, const std::vector<cv::Vec3d> &X, const std::vector<cv::Vec2d> &x, bool verbose = false)
     {
         // throw std::runtime_error("not implemented yet");
        if (X.size() != x.size()) {
@@ -182,6 +182,6 @@ namespace {
 
 }
 
-cv::Matx34d phg::findCameraMatrix(const Calibration &calib, const std::vector <cv::Vec3d> &X, const std::vector <cv::Vec2d> &x) {
-    return estimateCameraMatrixRANSAC(calib, X, x);
+cv::Matx34d phg::findCameraMatrix(const Calibration &calib, const std::vector <cv::Vec3d> &X, const std::vector <cv::Vec2d> &x, bool verbose) {
+    return estimateCameraMatrixRANSAC(calib, X, x, verbose);
 }
