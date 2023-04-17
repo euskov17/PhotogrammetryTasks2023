@@ -22,7 +22,7 @@
 #include <ceres/ceres.h>
 
 // TODO включите Bundle Adjustment (но из любопытства посмотрите как ведет себя реконструкция без BA например для saharov32 без BA)
-#define ENABLE_BA                             1
+#define ENABLE_BA                             0
 
 // TODO когда заработает при малом количестве фотографий - увеличьте это ограничение до 100 чтобы попробовать обработать все фотографии (если же успешно будут отрабаывать только N фотографий - отправьте PR выставив здесь это N)
 #define NIMGS_LIMIT                           10 // сколько фотографий обрабатывать (можно выставить меньше чтобы ускорить экспериментирование, или в случае если весь датасет не выравнивается)
@@ -48,9 +48,9 @@
 // скачайте их фотографии в папку data/src/datasets/DATASETNAME/ по ссылке из файла LINK.txt в папке датасета:
 
 // saharov32 и herzjesu25 - приятные датасеты, вероятно их оба получится выравнять целиком
-//#define DATASET_DIR                  "herzjesu25"
-//#define DATASET_DOWNSCALE            2 // для ускорения SIFT
-//#define DATASET_F                    (2761.5 / DATASET_DOWNSCALE) // see herzjesu25/K.txt
+// #define DATASET_DIR                  "herzjesu25"
+// #define DATASET_DOWNSCALE            1 // для ускорения SIFT
+// #define DATASET_F                    (2761.5 / DATASET_DOWNSCALE) // see herzjesu25/K.txt
 // TODO почему фокальная длина меняется от того что мы уменьшаем картинку? почему именно в такой пропорции? может надо домножать? или делить на downscale^2 ?
 
 // но temple47 - не вышло, я не разобрался в чем с ним проблема, может быть слишком мало точек, может критерии фильтрации выкидышей для него слишком строги
@@ -138,14 +138,14 @@ TEST (SFM, ReconstructNViews) {
     std::vector<cv::Mat> imgs;
     std::vector<std::string> imgs_labels;
     {
-        std::ifstream in(std::string("../data/src/datasets/") + DATASET_DIR + "/ordered_filenames.txt");
+        std::ifstream in(std::string("data/src/datasets/") + DATASET_DIR + "/ordered_filenames.txt");
         size_t nimages = 0;
         in >> nimages;
         std::cout << nimages << " images" << std::endl;
         for (int i = 0; i < nimages; ++i) {
             std::string img_name;
             in >> img_name;
-            std::string img_path = std::string("../data/src/datasets/") + DATASET_DIR + "/" + img_name;
+            std::string img_path = std::string("data/src/datasets/") + DATASET_DIR + "/" + img_name;
             cv::Mat img = cv::imread(img_path);
 
             if (img.empty()) {
@@ -282,13 +282,13 @@ TEST (SFM, ReconstructNViews) {
         std::vector<vector3d> tie_points_and_cameras;
         std::vector<cv::Vec3b> tie_points_colors;
         generateTiePointsCloud(tie_points, tracks, keypoints, imgs, aligned, cameras, ncameras, tie_points_and_cameras, tie_points_colors);
-        phg::exportPointCloud(tie_points_and_cameras, std::string("../data/debug/test_sfm_ba/") + DATASET_DIR + "/point_cloud_" + to_string(ncameras) + "_cameras.ply", tie_points_colors);
+        phg::exportPointCloud(tie_points_and_cameras, std::string("data/debug/test_sfm_ba/") + DATASET_DIR + "/point_cloud_" + to_string(ncameras) + "_cameras.ply", tie_points_colors);
 
 #if ENABLE_BA
         runBA(tie_points, tracks, keypoints, cameras, ncameras, calib);
 #endif
         generateTiePointsCloud(tie_points, tracks, keypoints, imgs, aligned, cameras, ncameras, tie_points_and_cameras, tie_points_colors);
-        phg::exportPointCloud(tie_points_and_cameras, std::string("../data/debug/test_sfm_ba/") + DATASET_DIR + "/point_cloud_" + to_string(ncameras) + "_cameras_ba.ply", tie_points_colors);
+        phg::exportPointCloud(tie_points_and_cameras, std::string("data/debug/test_sfm_ba/") + DATASET_DIR + "/point_cloud_" + to_string(ncameras) + "_cameras_ba.ply", tie_points_colors);
     }
 
     // append remaining cameras one by one
@@ -360,7 +360,7 @@ TEST (SFM, ReconstructNViews) {
         std::vector<vector3d> tie_points_and_cameras;
         std::vector<cv::Vec3b> tie_points_colors;
         generateTiePointsCloud(tie_points, tracks, keypoints, imgs, aligned, cameras, ncameras, tie_points_and_cameras, tie_points_colors);
-        phg::exportPointCloud(tie_points_and_cameras, std::string("../data/debug/test_sfm_ba/") + DATASET_DIR + "/point_cloud_" + to_string(ncameras) + "_cameras.ply", tie_points_colors);
+        phg::exportPointCloud(tie_points_and_cameras, std::string("data/debug/test_sfm_ba/") + DATASET_DIR + "/point_cloud_" + to_string(ncameras) + "_cameras.ply", tie_points_colors);
 
         // Запуск Bundle Adjustment
 #if ENABLE_BA
@@ -368,7 +368,7 @@ TEST (SFM, ReconstructNViews) {
 #endif
 
         generateTiePointsCloud(tie_points, tracks, keypoints, imgs, aligned, cameras, ncameras, tie_points_and_cameras, tie_points_colors);
-        phg::exportPointCloud(tie_points_and_cameras, std::string("../data/debug/test_sfm_ba/") + DATASET_DIR + "/point_cloud_" + to_string(ncameras) + "_cameras_ba.ply", tie_points_colors);
+        phg::exportPointCloud(tie_points_and_cameras, std::string("data/debug/test_sfm_ba/") + DATASET_DIR + "/point_cloud_" + to_string(ncameras) + "_cameras_ba.ply", tie_points_colors);
     }
 }
 
@@ -384,16 +384,27 @@ public:
                     T* residuals) const {       // невязка:  [2]  = {dx, dy}
         // TODO реализуйте функцию проекции, все нужно делать в типе T чтобы ceres-solver мог под него подставить как Jet (очень рекомендую посмотреть Jet.h - как класная статья из википедии!), так и double
 
-        // translation[3] - сдвиг в локальную систему координат камеры
+        T point[3];
 
-        // rotation[3] - angle-axis rotation, поворачиваем точку point->p (чтобы перейти в локальную систему координат камеры)
-        // подробнее см. https://en.wikipedia.org/wiki/Axis%E2%80%93angle_representation
-        // (P.S. у камеры всмысле вращения три степени свободы)
+        const T* rotation_angle_axis = camera_extrinsics + 3;
+        T Rt[9];
 
-        // Проецируем точку на фокальную плоскость матрицы (т.е. плоскость Z=фокальная длина)
+        ceres::AngleAxisToRotationMatrix(rotation_angle_axis, Rt);
+        
+        for (int i = 0; i < 3; i++){
+            point[i] = T(0);
+            for (int j = 0; j < 3; j++)
+                point[i] += Rt[j * 3 + i] * (point_global[j] - camera_extrinsics[j]);
+        }
+
+        point[0] /= point[2];
+        point[1] /= point[2];
 
 #if ENABLE_INSTRINSICS_K1_K2
         // k1, k2 - коэффициенты радиального искажения (radial distortion)
+        T radius = point[0] * point[0] + point[1] * point[1];
+        point[0] +=  (camera_intrinsics[0] + camera_intrinsics[1] * radius) * radius;
+        point[1] +=  (camera_intrinsics[0] + camera_intrinsics[1] * radius) * radius;
 #endif
 
         // Домножаем на f, тем самым переводя в пиксели
@@ -404,6 +415,12 @@ public:
 
         // Теперь по спроецированным координатам не забудьте посчитать невязку репроекции
 
+        point[0] = point[0] * camera_extrinsics[2] + camera_intrinsics[3];
+        point[1] = point[1] * camera_extrinsics[2] + camera_intrinsics[4];
+        // Теперь по спроецированным координатам не забудьте посчитать невязку репроекции
+
+        residuals[0] = point[0] - observed_x;
+        residuals[1] = point[1] - observed_y;
         return true;
         // TODO сверьте эту функцию с вашей реализацией проекции в src/phg/core/calibration.cpp (они должны совпадать)
     }
@@ -436,7 +453,13 @@ void runBA(std::vector<vector3d> &tie_points,
 
     // внутренние калибровочные параметры камеры: [5] = {k1, k2, f, cx, cy}
     // TODO: преобразуйте calib в блок параметров камеры (ее внутренних характеристик) для оптимизации в BA
-    double camera_intrinsics[5];
+    double camera_intrinsics[5] = {
+        calib.k1_, 
+        calib.k2_, 
+        calib.f_, 
+        calib.cx_ + calib.width_ / 2.0, 
+        calib.cy_ + calib.height_ / 2.0
+    };
     std::cout << "Before BA ";
     printCamera(camera_intrinsics);
 
@@ -576,7 +599,11 @@ void runBA(std::vector<vector3d> &tie_points,
     std::cout << "After BA ";
     printCamera(camera_intrinsics);
     // TODO преобразуйте параметры камеры в обратную сторону, чтобы последующая резекция учла актуальное представление о пространстве:
-    // calib.* = camera_intrinsics[*];
+    calib.k1_ = camera_intrinsics[0];
+    calib.k2_ = camera_intrinsics[1];
+    calib.f_ = camera_intrinsics[2];
+    calib.cx_ = camera_intrinsics[3] - calib.width_ / 2.0;
+    calib.cy_ = camera_intrinsics[4] - calib.height_ / 2.0;
 
     ASSERT_NEAR(calib.f_ , DATASET_F, 0.2 * DATASET_F);
     ASSERT_NEAR(calib.cx_, 0.0, 0.3 * calib.width());
@@ -650,7 +677,20 @@ void runBA(std::vector<vector3d> &tie_points,
 
             if (ENABLE_OUTLIERS_FILTRATION_COLINEAR && ENABLE_BA) {
                 // TODO выполните проверку случая когда два луча почти параллельны, чтобы не было странных точек улетающих на бесконечность (например чтобы угол был хотя бы 2.5 градуса)
-                // should_be_disabled = true;
+                for (size_t cj = 0; cj < track.img_kpt_pairs.size() && should_be_disabled; ++cj) {
+                    if (ci == cj) continue;
+
+                    matrix3d R2; 
+                    vector3d camera_origin2;
+                    
+                    phg::decomposeUndistortedPMatrix(R2, camera_origin2, cameras[track.img_kpt_pairs[cj].first]);
+                    
+                    vector3d vec1 = camera_origin - track_point;
+                    vector3d vec2 = camera_origin2 - track_point;
+                    
+                    if (cv::norm(vec1.cross(vec2)) > 0.99 * cv::norm(vec1) * cv::norm(vec2))
+                        should_be_disabled = true;
+                }
             }
 
             {

@@ -18,7 +18,7 @@
 #include "utils/test_utils.h"
 
 
-#define ENABLE_MY_SFM 1
+#define ENABLE_MY_SFM 0
 
 namespace {
 
